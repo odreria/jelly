@@ -1,2 +1,2 @@
-# gpm
-General Package Manager
+# Jelly
+General Package Manager for Groovy and Java code

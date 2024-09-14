@@ -1,0 +1,14 @@
+[package]
+name = "jelly"
+version = "0.1.0"
+edition = "2021"
+author= "Diego Cortes"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+toml = "0.5"
+reqwest = {version = "0.11", features = ["json"]}
+tokio = { version = "1", features = ["full"] }
+serde = { version= "1.0.210", features = ["derive"]}
+quick-xml = { version ="0.36.1", features = ["serialize"]}
