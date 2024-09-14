@@ -1,6 +1,7 @@
+use jelly::core::gdp::models::dependency::*;
 use quick_xml::de::from_str;
 use reqwest::get;
-use serde::{Deserialize};
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
@@ -9,154 +10,12 @@ use std::path::Path;
 use toml::de::Error as TomlError;
 use tokio;
 
-
-#[derive(Debug, Deserialize)]
-struct Project {
-    #[serde(rename = "parent")]
-    parent: Option<Parent>,
-    #[serde(rename = "modelVersion")]
-    model_version: Option<String>,
-    #[serde(rename = "artifactId")]
-    artifact_id: Option<String>,
-    #[serde(rename = "licenses")]
-    licenses: Option<Licenses>,
-    #[serde(rename = "properties")]
-    properties: Option<Properties>,
-    #[serde(rename = "dependencies")]
-    dependencies: Option<Dependencies>,
-    #[serde(rename = "build")]
-    build: Option<Build>,
-}
-
-#[derive(Debug, Deserialize)]
-struct Parent {
-    #[serde(rename = "groupId")]
-    group_id: Option<String>,
-    #[serde(rename = "artifactId")]
-    artifact_id: Option<String>,
-    #[serde(rename = "version")]
-    version: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-struct Licenses {
-    #[serde(rename = "license")]
-    licenses: Vec<License>,
-}
-
-#[derive(Debug, Deserialize)]
-struct License {
-    #[serde(rename = "name")]
-    name: Option<String>,
-    #[serde(rename = "url")]
-    url: Option<String>,
-    #[serde(rename = "distribution")]
-    distribution: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-struct Properties {
-    #[serde(rename = "doc.skip")]
-    doc_skip: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-struct Dependencies {
-    #[serde(rename = "dependency")]
-    dependencies: Option<Vec<Dependency>>,
-}
-
-#[derive(Debug, Deserialize)]
-struct Dependency {
-    #[serde(rename = "groupId")]
-    group_id: Option<String>,
-    #[serde(rename = "artifactId")]
-    artifact_id: Option<String>,
-    #[serde(rename = "version")]
-    version: Option<String>,
-    #[serde(rename = "optional")]
-    optional: Option<String>,
-    #[serde(rename = "scope")]
-    scope: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-struct Build {
-    #[serde(rename = "pluginManagement")]
-    plugin_management: Option<PluginManagement>,
-    #[serde(rename = "plugins")]
-    plugins: Option<Plugins>,
-}
-
-#[derive(Debug, Deserialize)]
-struct PluginManagement {
-    #[serde(rename = "plugins")]
-    plugins: Option<Vec<Plugin>>,
-}
-
-#[derive(Debug, Deserialize)]
-struct Plugins {
-    #[serde(rename = "plugin")]
-    plugins: Vec<Plugin>,
-}
-
-#[derive(Debug, Deserialize)]
-struct Plugin {
-    #[serde(rename = "groupId")]
-    group_id: Option<String>,
-    #[serde(rename = "artifactId")]
-    artifact_id: Option<String>,
-    #[serde(rename = "version")]
-    version: Option<String>,
-    #[serde(rename = "configuration")]
-    configuration: Option<Configuration>,
-}
-
-#[derive(Debug, Deserialize)]
-struct Configuration {
-    #[serde(rename = "excludes")]
-    excludes: Option<Excludes>,
-    #[serde(rename = "classpathDependencyExcludes")]
-    classpath_dependency_excludes: Option<ClasspathDependencyExcludes>,
-    #[serde(rename = "systemProperties")]
-    system_properties: Option<SystemProperties>,
-    #[serde(rename = "includes")]
-    includes: Option<Includes>,
-}
-
-#[derive(Debug, Deserialize)]
-struct Excludes {
-    #[serde(rename = "exclude")]
-    exclude: Vec<String>,
-}
-
-#[derive(Debug, Deserialize)]
-struct ClasspathDependencyExcludes {
-    #[serde(rename = "classpathDependencyExclude")]
-    classpath_dependency_exclude: Vec<String>,
-}
-
-#[derive(Debug, Deserialize)]
-struct SystemProperties {
-    #[serde(rename = "io.vertx.web.route.param.extended-pattern")]
-    extended_pattern: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-struct Includes {
-    #[serde(rename = "include")]
-    include: Vec<String>,
-}
-
-
-
 #[derive(Debug, Deserialize)]
 struct DependencyDetail {
     file_name: String,
     url_jar: String,
     url_pom: String,
 }
-
 
 #[derive(Debug, Deserialize)]
 struct TomlDependencies {
