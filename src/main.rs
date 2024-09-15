@@ -4,9 +4,6 @@ use reqwest::get;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs;
-use std::fs::File;
-use std::io::copy;
-use std::path::Path;
 use toml::de::Error as TomlError;
 use tokio;
 
@@ -20,6 +17,38 @@ struct DependencyDetail {
 #[derive(Debug, Deserialize)]
 struct TomlDependencies {
     dependencies: HashMap<String, String>,
+}
+
+impl TomlDependencies {
+    fn new() -> Self {
+        let new_map = HashMap::new();
+        TomlDependencies { dependencies: new_map}
+    }
+
+    fn values_to_vec(&self) -> Vec<DependencyDetail> {
+        let mut vec: Vec<DependencyDetail> = Vec::new();
+
+        for (artifact, version) in &self.dependencies {
+            vec.push(Self::parse_dependency(&artifact, &version));
+        }
+
+        vec
+    }
+
+    fn parse_dependency(artifact: &str, version: &str) -> DependencyDetail {
+        let parts: Vec<&str> = artifact.split(':').collect();
+        let group_id = parts[0].replace('.', "/");
+        let artifact_id = parts[1];
+        let file_name = format!("{}-{}.jar", artifact_id, version);
+        let url_jar = get_url_maven_format(&group_id, &artifact_id, &version, "jar");
+        let url_pom = get_url_maven_format(&group_id, &artifact_id, &version, "pom");
+
+        DependencyDetail {
+            file_name,
+            url_jar,
+            url_pom,
+        }
+    }
 }
 
 fn read_toml_file(file_path: &str) -> Result<TomlDependencies, TomlError> {
@@ -43,43 +72,11 @@ fn parse_pom(xml: &str) -> Project {
     from_str(xml).unwrap()
 }
 
-fn parse_dependency(artifact: &str, version: &str) -> DependencyDetail {
-    let parts: Vec<&str> = artifact.split(':').collect();
-    let group_id = parts[0].replace('.', "/");
-    let artifact_id = parts[1];
-    let file_name = format!("{}-{}.jar", artifact_id, version);
-    let url_jar = get_url_maven_format(&group_id, &artifact_id, &version, "jar");
-    let url_pom = get_url_maven_format(&group_id, &artifact_id, &version, "pom");
-
-    DependencyDetail {
-        file_name,
-        url_jar,
-        url_pom,
-    }
-}
-
-async fn download_dependencies(url: &str, path: &Path) -> Result<(), reqwest::Error> {
-    let response = get(url).await?;
-    let mut file = File::create(path).expect("error al crear el archivo");
-    copy(&mut response.bytes().await?.as_ref(), &mut file).expect("No logro copiar el archivo.");
-    Ok(())
-}
-
-async fn download_pom(url: &str) -> Result<String, reqwest::Error> {
-    let content_req = get(url).await?;
-    let content = content_req.text().await?;
-    Ok(content)
-}
-
 #[tokio::main]
 async fn main() {
-    let dependencies: TomlDependencies = read_toml_file("grocket.toml").unwrap();
+    let dependencies: TomlDependencies = read_toml_file("jelly.toml").unwrap();
 
-    let mut dependency_details: Vec<DependencyDetail> = Vec::new();
-
-    for (artifact, version) in dependencies.dependencies {
-        dependency_details.push(parse_dependency(&artifact, &version));
-    }
+    let dependency_details: Vec<DependencyDetail> = dependencies.values_to_vec();
 
     for detail in &dependency_details {
         println!("File: {} ", detail.file_name);
@@ -98,7 +95,7 @@ async fn main() {
             }
         };
 
-        let mut verified_pom_dependencies: Vec<TomlDependencies> = vec![];
+        let mut mikoki : TomlDependencies = TomlDependencies::new();
         
         if let Some(dep) = &pom_dependencies.dependencies {
             for element in dep {
@@ -124,13 +121,8 @@ async fn main() {
 
                 if opcional_dependency.is_empty() || opcional_dependency.eq("false") {
                     if scope_dependency.is_empty() || !scope_dependency.eq("test") {
-
-                        let mut dependenecy_reviews = HashMap::new();
-                        dependenecy_reviews.insert(format!("{}:{}", group_id, artifact), "4.5.10".to_string());
-
-                        verified_pom_dependencies.push(TomlDependencies {
-                            dependencies: dependenecy_reviews,
-                        });  
+                        mikoki.dependencies.insert(format!("{}:{}", group_id, artifact), "4.5.10".to_string());
+  
                     }
                 }
             }
@@ -139,18 +131,8 @@ async fn main() {
         }
 
 
-        let map = verified_pom_dependencies.iter().map(| d | {
-            
-             let mut verified_dependency_details: Vec<DependencyDetail> = Vec::new();
-            for (artifact, version) in &d.dependencies {
-                verified_dependency_details.push(parse_dependency(&artifact, &version));
-            }
-            verified_dependency_details
-            
-        });
-
         // Investigar en la busqueda en profundids bfs
-        print!("{:?}", map);
+        print!("{:?}", mikoki.values_to_vec());
         
        // for (artifact, version) in verified_pom_dependencies.dependencies {
           //  dependency_details.push(parse_dependency(&artifact, &version));
