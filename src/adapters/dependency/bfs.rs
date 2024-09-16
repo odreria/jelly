@@ -1,4 +1,4 @@
-use crate::core::gdp::search::dependency_search::DependencySearch;
+use crate::core::gdp::dependency::dependency_search::DependencySearch;
 
 pub struct BreadFirstSearch;
 

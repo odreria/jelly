@@ -1,3 +1,3 @@
 pub mod models;
 pub mod service;
-pub mod search;
+pub mod dependency;
