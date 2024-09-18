@@ -3,6 +3,8 @@ use crate::core::gdp::models::dependency::Project;
 
 use serde::Deserialize;
 use std::collections::HashMap;
+use std::future::Future;
+use std::pin::Pin;
 use reqwest::get;
 use std::io::copy;
 use std::fs::File;
@@ -15,26 +17,36 @@ pub struct Pom;
 
 impl PomManagment for Pom {
 
-    async fn download_dependencies(url: &str, path: &Path) -> Result<(), reqwest::Error> {
-        let response = get(url).await?;
-        let mut file = File::create(path).expect("Dependency cannot be founded.");
-        copy(&mut response.bytes().await?.as_ref(), &mut file).expect("Dependency cannot be copied.");
-        Ok(())
+    fn download_dependencies(url: &str, path: &Path) -> Pin<Box<dyn Future<Output = Result<(), reqwest::Error>> + Send>> {
+
+        Box::pin(async move { 
+
+            let response = get(url).await?;
+            let mut file = File::create(path).expect("");
+            copy(&mut response.bytes().await?.as_ref(), &mut file).expect("Dependency cannot be copied.");
+            Ok(())
+            
+        })
     }
 
-    async fn download_pom(url: &str) -> Result<String, reqwest::Error> {
-        let content_req = get(url).await?;
-        let content = content_req.text().await?;
-        Ok(content)
+    fn download_pom(url: &str) -> Pin<Box<dyn Future<Output = Result<String, reqwest::Error>> + Send>> {
+
+        Box::pin(async move {
+
+            let content_req = get(url).await?;
+            let content = content_req.text().await?;
+            Ok(content)
+
+        })
     }
 
-    fn read_toml_file(file_path: &str) -> Result<TomlDependencies, TomlError> {
+    fn read_toml_file(&self, file_path: &str) -> Result<TomlDependencies, TomlError> {
         let content = fs::read_to_string(file_path).expect("No se logro leer el archivo");
         let dependencies: TomlDependencies = toml::de::from_str(&content)?;
         Ok(dependencies)
     }
 
-    fn parse_pom(xml: &str) -> Project {
+    fn parse_pom(&self, xml: &str) -> Project {
         from_str(xml).unwrap()
     }
 }
