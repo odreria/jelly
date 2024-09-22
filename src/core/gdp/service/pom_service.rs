@@ -65,7 +65,7 @@ impl<R: PomManagment> PomService<R> {
 
     }
 
-    pub fn collect_all_pom(&self, file_path: &str) -> Vec<DependencyDetail> {
+    pub fn get_init_pom(&self, file_path: &str) -> Vec<DependencyDetail> {
         self.managment.read_toml_file(file_path).unwrap().values_to_vec()
     }
 }

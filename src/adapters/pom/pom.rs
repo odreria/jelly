@@ -23,7 +23,7 @@ impl PomManagment for Pom {
 }
 
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct DependencyDetail {
     pub file_name: String,
     pub url_jar: String,
@@ -51,7 +51,7 @@ impl TomlDependencies {
         vec
     }
 
-    pub fn parse_dependency(artifact: &str, version: &str) -> DependencyDetail {
+    fn parse_dependency(artifact: &str, version: &str) -> DependencyDetail {
         let parts: Vec<&str> = artifact.split(':').collect();
         let group_id = parts[0].replace('.', "/");
         let artifact_id = parts[1];
@@ -66,7 +66,7 @@ impl TomlDependencies {
         }
     }
 
-    pub fn get_url_maven_format(group_id: &str, artifact_id: &str, version: &str, extension: &str) -> String {
+    fn get_url_maven_format(group_id: &str, artifact_id: &str, version: &str, extension: &str) -> String {
         let file_name = format!("{}-{}.{}", artifact_id, version, extension);
         format!(
             "https://repo1.maven.org/maven2/{}/{}/{}/{}",
