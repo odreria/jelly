@@ -23,7 +23,7 @@ impl PomManagment for Pom {
 }
 
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 pub struct DependencyDetail {
     pub file_name: String,
     pub url_jar: String,
