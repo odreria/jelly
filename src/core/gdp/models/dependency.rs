@@ -51,13 +51,13 @@ pub struct Properties {
     pub doc_skip: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Dependencies {
     #[serde(rename = "dependency")]
     pub dependencies: Option<Vec<Dependency>>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Dependency {
     #[serde(rename = "groupId")]
     pub group_id: Option<String>,
