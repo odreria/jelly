@@ -20,4 +20,8 @@ impl DependencySearch for BreadFirstSearch {
         }
      }
 
+     fn dequeue(&mut self) -> Option<DependencyDetail> {
+        self.queue.pop_front()
+     }
+
 }
