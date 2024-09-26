@@ -26,6 +26,7 @@ impl PomManagment for Pom {
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct DependencyDetail {
     pub file_name: String,
+    pub version: String,
     pub url_jar: String,
     pub url_pom: String,
 }
@@ -61,6 +62,7 @@ impl TomlDependencies {
 
         DependencyDetail {
             file_name,
+            version: version.to_string(),
             url_jar,
             url_pom,
         }
