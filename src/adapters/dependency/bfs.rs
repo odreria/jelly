@@ -9,7 +9,14 @@ pub struct Discovers {
 
 pub struct BreadFirstSearch{
     pub queue: VecDeque<DependencyDetail>,
-    pub discovers: Discovers,
+}
+
+impl BreadFirstSearch {
+    pub fn new() -> Self {
+        BreadFirstSearch {
+            queue: VecDeque::new(),
+        }
+    }
 }
 
 impl DependencySearch for BreadFirstSearch {

@@ -30,10 +30,24 @@ impl<T: DependencySearch, V: PomManagment> DependencyService<T, V> {
 
         while end == false {
             let u = self.search.dequeue();
-            // add instruction to download the jar file
             if let Some(dep) = u {
-                // find the pom dependencies for dep and add the to queue
-                // mark the dependency with gray color
+                println!("Downloading {}", dep.file_name);
+                // add instruction to download the jar file
+
+                let mut vec_dep = Vec::new();
+                vec_dep.insert(1, dep);
+
+               let internal_toml = match self.pom_service.get_pom_details(&vec_dep).await {
+                    Ok(pomxml) => pomxml,
+                    Err(_) => panic!("Error downloading internal pom.xml details"),
+                };
+
+                if internal_toml.dependencies.len() != 0 {
+                    self.search.enqueue(&internal_toml.values_to_vec());
+                } else {
+                    end = true;
+                }
+
             }
 
         }
