@@ -1,6 +1,5 @@
 use crate::{adapters::pom::pom::{DependencyDetail, TomlDependencies}, core::gdp::{dependency::pom_managment::PomManagment, models::dependency::Dependencies}};
 use reqwest::get;
-
 pub struct PomService<R: PomManagment> {
     pub managment: R,
  }
