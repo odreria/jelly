@@ -1,4 +1,8 @@
-use crate::{adapters::pom::pom::{DependencyDetail, TomlDependencies}, core::gdp::{dependency::pom_managment::PomManagment, models::dependency::Dependencies}};
+use std::thread::scope;
+
+use crate::{adapters::pom::pom::{DependencyDetail, TomlDependencies}, core::gdp::{dependency::pom_managment::PomManagment, models::dependency::{Dependencies, DependencyManagment}}};
+use quick_xml::de;
+use regex::Regex;
 use reqwest::get;
 pub struct PomService<R: PomManagment> {
     pub managment: R,
@@ -18,6 +22,31 @@ impl<R: PomManagment> PomService<R> {
             let pom_content = content_req.text().await.expect("error al obtener el texto");
     
             let project_xml = self.managment.parse_pom(&pom_content);
+
+            let dep_managment = match project_xml.dependency_managment {
+                Some(value) => value,
+                None => DependencyManagment {
+                    dependencies: None
+                }
+            };
+
+
+            if let Some(dep) = dep_managment.dependencies {
+
+                let version = dep.dependency.expect("msg").version.expect("msg");
+                let properties = project_xml.properties.expect("msg");
+
+                let rep = Regex::new(r"\$\{([^}]+)\}").unwrap();
+                let caps = rep.captures(&version).unwrap();        
+                let raw_version = caps.get(1).map_or("", |m| m.as_str());
+
+                println!("{:?}", &raw_version);
+                println!("{:?}", properties.get(raw_version));
+
+                // Here we should go to pom dependencies URL to get the sbom value,
+                // after that, we need to go to "library"-SBOM to get the correct version.
+            }
+
     
             let pom_dependency: Dependencies = match project_xml.dependencies {
                 Some(value) => value.clone(),
@@ -47,10 +76,21 @@ impl<R: PomManagment> PomService<R> {
                         Some(value) => value.clone(),
                         None => String::from("")
                     };
+
+                    let version_dependency: String = match &element.version {
+                        Some(value) => value.clone(),
+                        None => String::from(""),
+                    };
+
+                    let version_final = if version_dependency.is_empty() { 
+                        "4.5.10".to_string() } else { version_dependency};
     
                     if opcional_dependency.is_empty() || opcional_dependency.eq("false") {
                         if scope_dependency.is_empty() || !scope_dependency.eq("test") {
-                            toml_dependencies.dependencies.insert(format!("{}:{}", group_id, artifact), "4.5.10".to_string());
+                            toml_dependencies.dependencies.insert(
+                                format!("{}:{}", 
+                                group_id, artifact),
+                                version_final);
       
                         }
                     }
