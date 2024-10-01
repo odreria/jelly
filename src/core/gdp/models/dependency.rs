@@ -1,4 +1,6 @@
 
+use std::collections::HashMap;
+
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -12,7 +14,9 @@ pub struct Project {
     #[serde(rename = "licenses")]
     pub licenses: Option<Licenses>,
     #[serde(rename = "properties")]
-    pub properties: Option<Properties>,
+    pub properties: Option<HashMap<String, String>>,
+    #[serde(rename = "dependencyManagement")]
+    pub dependency_managment: Option<DependencyManagment>,
     #[serde(rename = "dependencies")]
     pub dependencies: Option<Dependencies>,
     #[serde(rename = "build")]
@@ -46,9 +50,30 @@ pub struct License {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct Properties {
-    #[serde(rename = "doc.skip")]
-    pub doc_skip: Option<String>,
+pub struct DependencyManagment {
+    #[serde(rename = "dependencies")]
+    pub dependencies: Option<DependenciesManagment>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DependenciesManagment {
+    #[serde(rename = "dependency")]
+    pub dependency: Option<DependencyPomType>,
+}
+
+
+#[derive(Debug, Deserialize)]
+pub struct DependencyPomType {
+    #[serde(rename = "groupId")]
+    pub group_id: Option<String>,
+    #[serde(rename = "artifactId")]
+    pub artifact_id: Option<String>,
+    #[serde(rename = "version")]
+    pub version: Option<String>,
+    #[serde(rename = "type")]
+    pub type_dep: Option<String>,
+    #[serde(rename = "scope")]
+    pub scope: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
