@@ -1,7 +1,6 @@
-use std::thread::scope;
+use std::collections::HashMap;
 
-use crate::{adapters::pom::pom::{DependencyDetail, TomlDependencies}, core::gdp::{dependency::pom_managment::PomManagment, models::dependency::{Dependencies, DependencyManagment}}};
-use quick_xml::de;
+use crate::{adapters::pom::pom::{DependencyDetail, TomlDependencies}, core::gdp::{dependency::pom_managment::PomManagment, models::dependency::{Dependencies, DependenciesManagment, DependencyManagment, Project}, util::maven_helper::{get_raw_version, get_url_maven_format}}};
 use regex::Regex;
 use reqwest::get;
 pub struct PomService<R: PomManagment> {
@@ -18,10 +17,7 @@ impl<R: PomManagment> PomService<R> {
         let mut toml_dependencies : TomlDependencies = TomlDependencies::new();
 
         for detail in dependency_details {
-            let content_req = get(&detail.url_pom).await.expect("error al consultar el pom");
-            let pom_content = content_req.text().await.expect("error al obtener el texto");
-    
-            let project_xml = self.managment.parse_pom(&pom_content);
+            let project_xml = self.get_project_pom(&detail.url_pom).await;
 
             let dep_managment = match project_xml.dependency_managment {
                 Some(value) => value,
@@ -31,18 +27,34 @@ impl<R: PomManagment> PomService<R> {
             };
 
 
-            if let Some(dep) = dep_managment.dependencies {
-
-                let version = dep.dependency.expect("msg").version.expect("msg");
+            if let Some(dpm) = dep_managment.dependencies {
                 let properties = project_xml.properties.expect("msg");
+                let url_dpm = self.get_pom_dependencies_managment(dpm, properties);
+                let project_dpm = self.get_project_pom(&url_dpm).await;
+                
+                let dependencies_dpm = match project_dpm.dependencies {
+                    Some(value) => value.dependencies,
+                    None => None,
+                }.expect("msg");
 
-                let rep = Regex::new(r"\$\{([^}]+)\}").unwrap();
-                let caps = rep.captures(&version).unwrap();        
-                let raw_version = caps.get(1).map_or("", |m| m.as_str());
+                // It should return a Ma<String, String> With key = full dependency name concatenated
+                // and value = raw_Version
+                dependencies_dpm.into_iter().map(|d| 
 
-                println!("{:?}", &raw_version);
-                println!("{:?}", properties.get(raw_version));
+                    match &d.type_dep {
+                        Some(value) => 
+                            if "pom".eq(value) {
+                                // include code to find SBOM POM
+                            } else {
+                                // get the raw version
+                            }
+                        None => () // get the raw version,
+                    }
 
+                );
+
+                // first check the version for stack version
+                // verify if it has dependncy pom type
                 // Here we should go to pom dependencies URL to get the sbom value,
                 // after that, we need to go to "library"-SBOM to get the correct version.
             }
@@ -104,7 +116,29 @@ impl<R: PomManagment> PomService<R> {
 
     }
 
+    pub fn get_pom_dependencies_managment(&self, dpm: DependenciesManagment, properties: HashMap<String, String>) -> String {
+
+        let dependency_managment = dpm.dependency.expect("msg");
+
+        let version = dependency_managment.version.expect("msg").clone();
+
+        let raw_version = get_raw_version(&version, properties);
+
+        let raw_group_id = dependency_managment.group_id.expect("msg").clone();
+        let group_id = raw_group_id.replace(".", "/");
+        let artifact_id = dependency_managment.artifact_id.expect("msg").clone();
+
+        get_url_maven_format(&group_id, &artifact_id, &raw_version, "pom")
+    }
+
     pub fn get_init_pom(&self, file_path: &str) -> Vec<DependencyDetail> {
         self.managment.read_toml_file(file_path).unwrap().values_to_vec()
     }
+
+    pub async fn get_project_pom(&self, url_pom: &String) -> Project {
+        let content_req = get(url_pom).await.expect("error al consultar el pom");
+        let pom_content = content_req.text().await.expect("error al obtener el texto");
+
+        self.managment.parse_pom(&pom_content)
+}
 }
