@@ -1,5 +1,6 @@
 use crate::core::gdp::dependency:: pom_managment::PomManagment;
 use crate::core::gdp::models::dependency::Project;
+use crate::core::gdp::util::maven_helper::get_url_maven_format;
 
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -57,8 +58,8 @@ impl TomlDependencies {
         let group_id = parts[0].replace('.', "/");
         let artifact_id = parts[1];
         let file_name = format!("{}-{}.jar", artifact_id, version);
-        let url_jar = Self::get_url_maven_format(&group_id, &artifact_id, &version, "jar");
-        let url_pom = Self::get_url_maven_format(&group_id, &artifact_id, &version, "pom");
+        let url_jar = get_url_maven_format(&group_id, &artifact_id, &version, "jar");
+        let url_pom = get_url_maven_format(&group_id, &artifact_id, &version, "pom");
 
         DependencyDetail {
             file_name,
@@ -68,14 +69,4 @@ impl TomlDependencies {
         }
     }
 
-    fn get_url_maven_format(group_id: &str, artifact_id: &str, version: &str, extension: &str) -> String {
-        let file_name = format!("{}-{}.{}", artifact_id, version, extension);
-        format!(
-            "https://repo1.maven.org/maven2/{}/{}/{}/{}",
-            group_id,
-            artifact_id,
-            version,
-            file_name
-        )
-    }
 }

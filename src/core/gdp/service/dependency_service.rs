@@ -31,7 +31,6 @@ impl<T: DependencySearch, V: PomManagment> DependencyService<T, V> {
             if let Some(dep) = u {
                 println!("Downloading {}", dep.file_name);
                 // add instruction to download the jar file
-                println!("With POM URL {}", dep.url_pom);
 
                 let mut vec_dep = Vec::new();
                 vec_dep.push(dep);

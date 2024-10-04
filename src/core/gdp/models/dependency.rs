@@ -92,6 +92,8 @@ pub struct Dependency {
     pub version: Option<String>,
     #[serde(rename = "optional")]
     pub optional: Option<String>,
+    #[serde(rename = "type")]
+    pub type_dep: Option<String>,
     #[serde(rename = "scope")]
     pub scope: Option<String>,
 }
