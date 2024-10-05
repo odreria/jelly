@@ -19,6 +19,7 @@ impl PomManagment for Pom {
     }
 
     fn parse_pom(&self, xml: &str) -> Project {
+        println!("{:}", xml);
         from_str(xml).unwrap()
     }
 }
