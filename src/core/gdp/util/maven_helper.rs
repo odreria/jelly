@@ -18,7 +18,7 @@ pub fn get_url_maven_format(group_id: &str, artifact_id: &str, version: &str, ex
 
 pub fn get_raw_version (
     version: &String,
-    properties: HashMap<String, String>,
+    properties: &HashMap<String, String>,
     stack_version: Option<String>
 ) -> String {
 

@@ -58,9 +58,8 @@ pub struct DependencyManagment {
 #[derive(Debug, Deserialize)]
 pub struct DependenciesManagment {
     #[serde(rename = "dependency")]
-    pub dependency: Option<DependencyPomType>,
+    pub dependency: Option<Vec<DependencyPomType>>,
 }
-
 
 #[derive(Debug, Deserialize)]
 pub struct DependencyPomType {
