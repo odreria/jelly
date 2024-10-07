@@ -1,4 +1,4 @@
-use crate::core::gdp::dependency::{dependency_search::DependencySearch, pom_managment::PomManagment};
+use crate::{core::gdp::dependency::{dependency_search::DependencySearch, pom_managment::PomManagment}, errors::beetle_error::BeetleError};
 use super::pom_service::PomService;
 
 pub struct DependencyService<T: DependencySearch, V: PomManagment> {
@@ -14,15 +14,23 @@ impl<T: DependencySearch, V: PomManagment> DependencyService<T, V> {
         }
     }
 
-    pub async fn start(&mut self) {
+    pub async fn start(&mut self) -> Result<(), BeetleError> {
         let mut end: bool = false;
+        let dependencies_from_toml =
+            self.pom_service.get_init_pom("jelly.toml");
 
-        let dependencies_from_toml = self.pom_service.get_init_pom("jelly.toml");
-
-        let toml = match self.pom_service.get_pom_details(&dependencies_from_toml).await {
-            Ok(pomxml) => pomxml,
-            Err(_) => panic!("Error downloading pom.xml details"),
-        };
+        let toml =
+            self
+            .pom_service
+            .get_pom_details(&dependencies_from_toml)
+            .await
+            .map_err(
+                |e| {
+                    BeetleError::MissingValue(
+                        format!("Error downloading pom.xml details {}", e)
+                    )
+                }
+            )?;
 
         self.search.enqueue(&toml.values_to_vec());
 
@@ -49,6 +57,8 @@ impl<T: DependencySearch, V: PomManagment> DependencyService<T, V> {
             }
 
         }
+
+        Ok(())
 
     }
 

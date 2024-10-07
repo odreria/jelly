@@ -5,7 +5,7 @@ use crate::{
     core::gdp::{
         dependency::pom_managment::PomManagment,
         models::dependency::{
-            Dependencies, DependenciesManagment, Dependency, DependencyManagment, Project,
+            Dependencies, DependenciesManagment, DependencyManagment, DependencyPomType, Project
         },
         util::maven_helper::{get_raw_version, get_url_maven_format},
     }, errors::beetle_error::BeetleError,
@@ -32,12 +32,13 @@ impl<R: PomManagment> PomService<R> {
         let mut toml_dependencies: TomlDependencies = TomlDependencies::new();
 
         for detail in dependency_details {
+            println!("{:?}", detail.file_name );
             let project_xml =
                 self.get_project_pom(&detail.url_pom).await.map_err(BeetleError::from)?;
 
-            let dep_managment = match project_xml.dependency_managment {
+            let dep_managment = match project_xml.dependencies_managment {
                 Some(value) => value,
-                None => DependencyManagment { dependencies: None },
+                None => DependenciesManagment { dependencies: None },
             };
 
             if let Some(dpm) = dep_managment.dependencies {
@@ -56,47 +57,69 @@ impl<R: PomManagment> PomService<R> {
                     .await
                     .map_err(BeetleError::from)?;
 
+                let properties_dpm =
+                    project_dpm
+                    .properties
+                    .ok_or_else(
+                        || BeetleError::MissingValue("Properties dpm not found".to_string()))?;
+
+
                 let dependencies_dpm =
                     project_dpm
-                    .dependencies
+                    .dependencies_managment
                     .ok_or_else(
                      || BeetleError::MissingValue(
                             "Dependecies section not found from DependencyManagment".to_string()))?;
                 
-                let dependency_dpm_vec =
+                let dependency_dpm =
                     dependencies_dpm
                     .dependencies
                     .ok_or_else(
                         || BeetleError::MissingValue(
                                 "Dependency not found from DependencyManagment".to_string()))?;
 
-                // It should return a Ma<String, String> With key = full dependency name concatenated
-                // and value = raw_Version
-                for d in dependency_dpm_vec {
-                    match &d.type_dep {
-                        Some(value) => {
-                            if "pom".eq(value) {
-                                let url_sbom = self.get_pom_dependencies_from_sbom(d, &properties);
-                                let project_sbom = self.get_project_pom(&url_sbom).await;
+                if let Some(dpm_vec) = dependency_dpm.dependency {
+                    // It should return a Ma<String, String> With key = full dependency name concatenated
+                    // and value = raw_Version
+                    for d in dpm_vec {
+                        match &d.type_dep {
+                            Some(value) => {
+                                if value.contains(&"pom".to_string()) {
+                                    let url_sbom =
+                                        self
+                                        .get_pom_dependencies_from_bom(d, &properties_dpm)?;
 
-                                let dependencies_sbom = match project_sbom.dependencies {
-                                    Some(value) =>  value.dependencies,
-                                    None => None,
-                                };
+                                    let project_sbom =
+                                        self
+                                        .get_project_pom(&url_sbom)
+                                        .await
+                                        .map_err(BeetleError::from)?;
 
-                                let dep_sbom = dependencies_sbom.expect("msg");
-                                println!("{:?}", dep_sbom);
-                                
-                                // we need to go to "library"-SBOM to get the correct version.
-                                // get all dependencies and version with stack.version or filter them.
-                                
-                            } else {
-                                self.populate_artifact_map(d, &properties)
+                                    let dependencies_sbom = match project_sbom.dependencies_managment {
+                                        Some(value) =>  value.dependencies,
+                                        None => None,
+                                    };
+
+                                    let dep_bom = dependencies_sbom.expect("msg");
+
+                                    if let Some(dppp) = dep_bom.dependency {
+                                        for k in dppp {
+                                            self.populate_artifact_map(k, &properties_dpm, project_sbom.version.clone());
+                                        }
+                                    } 
+
+                                    //
+                                    // populate_artifact_map must be like a Set and it
+                                    // must be used to identify the version of the artifacts.
+                                    //
+                                    
+                                }
                             }
+                            None => self.populate_artifact_map(d, &properties_dpm, None)?,
                         }
-                        None => self.populate_artifact_map(d, &properties),
                     }
                 }
+
             }
 
             let pom_dependency: Dependencies = match project_xml.dependencies {
@@ -155,11 +178,12 @@ impl<R: PomManagment> PomService<R> {
 
     fn populate_artifact_map(
         &mut self,
-        d: Dependency,
-        properties: &HashMap<String, String>
-    ) {
+        d: DependencyPomType,
+        properties: &HashMap<String, String>,
+        project_version: Option<String>,
+    )  -> Result<(), BeetleError> {
         let version = &d.version.expect("msg");
-        let raw_version = get_raw_version(version, properties, None);
+        let raw_version = get_raw_version(version, properties, project_version)?;
         let raw_group_id = d.group_id.expect("msg").clone();
         let raw_artifact_id = d.artifact_id.expect("msg");
 
@@ -168,22 +192,29 @@ impl<R: PomManagment> PomService<R> {
         self.artifact_map
             .insert(format!("{}:{}", raw_group_id, raw_artifact_id), raw_version);
 
+        Ok(())
     }
 
-    fn get_pom_dependencies_from_sbom(
+    fn get_pom_dependencies_from_bom(
         &self,
-        d: Dependency,
+        d: DependencyPomType,
         properties: &HashMap<String, String>
-    ) -> String {
+    ) -> Result<String, BeetleError> {
 
         let version = d.version.expect("msg");
-        let raw_version = get_raw_version(&version, properties, None);
+        let raw_version =
+            get_raw_version(&version, properties,None)?;
 
         let group_id = d.group_id.expect("msg").clone();
         let raw_group_id = group_id.replace(".", "/");
         let artifact_id = d.artifact_id.expect("msg").clone();
 
-        get_url_maven_format(&raw_group_id, &artifact_id, &raw_version, "pom")
+        let url_pom =
+            get_url_maven_format(
+                &raw_group_id, &artifact_id, &raw_version, 
+                "pom");
+
+        Ok(url_pom)
         
     }
 
@@ -192,7 +223,7 @@ impl<R: PomManagment> PomService<R> {
     /// 
     /// # Arguments 
     /// 
-    /// * `dpm` - The DependenciesManagment struct that contains dependency information.
+    /// * `dpm` - The DependencyManagment struct that contains dependency information.
     /// * `properties` - Properties Map that may be used for getting the raw version of
     /// DepedencyManagment information.
     /// 
@@ -201,7 +232,7 @@ impl<R: PomManagment> PomService<R> {
     /// Result`<Vec<String, BettleError>>`  where each `String` is a URL's POM or BettleError message. 
     fn get_pom_dependencies_managment(
         &self,
-        dpm: DependenciesManagment,
+        dpm: DependencyManagment,
         properties: &HashMap<String, String>,
     ) -> Result<Vec<String>, BeetleError> {
         let dependencies =
@@ -219,10 +250,8 @@ impl<R: PomManagment> PomService<R> {
                     || BeetleError::MissingValue("Version not found".to_string()))?;
 
             let raw_version =
-                get_raw_version(
-                    &version, properties,
-                    None);
-        
+                get_raw_version(&version, properties, None)?;
+
             let raw_group_id =
                 dependency_managment
                 .group_id

@@ -1,4 +1,2 @@
 [dependencies]
-"org.springframework.boot:spring-boot-starter-web" = "3.3.4"
-"io.vertx:vertx-web" = "4.5.10"
 "io.vertx:vertx-core" = "4.5.10"

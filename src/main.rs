@@ -4,11 +4,14 @@ use tokio;
 #[tokio::main]
 async fn main() {
 
-    DependencyService::new(
+    match DependencyService::new(
         BreadFirstSearch::new(),
         PomService::new(Pom)
     )
     .start()
-    .await;
+    .await {
+        Ok(_) => print!("POM Processed Correclty."),
+        Err(e) => eprint!("An error ocurred: {}", e),
+    };
 
 }

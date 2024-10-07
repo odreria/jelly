@@ -11,12 +11,14 @@ pub struct Project {
     pub model_version: Option<String>,
     #[serde(rename = "artifactId")]
     pub artifact_id: Option<String>,
+    #[serde(rename = "version")]
+    pub version: Option<String>,
     #[serde(rename = "licenses")]
     pub licenses: Option<Licenses>,
     #[serde(rename = "properties")]
     pub properties: Option<HashMap<String, String>>,
     #[serde(rename = "dependencyManagement")]
-    pub dependency_managment: Option<DependencyManagment>,
+    pub dependencies_managment: Option<DependenciesManagment>,
     #[serde(rename = "dependencies")]
     pub dependencies: Option<Dependencies>,
     #[serde(rename = "build")]
@@ -50,13 +52,13 @@ pub struct License {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct DependencyManagment {
+pub struct DependenciesManagment {
     #[serde(rename = "dependencies")]
-    pub dependencies: Option<DependenciesManagment>,
+    pub dependencies: Option<DependencyManagment>,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct DependenciesManagment {
+pub struct DependencyManagment {
     #[serde(rename = "dependency")]
     pub dependency: Option<Vec<DependencyPomType>>,
 }
