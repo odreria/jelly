@@ -32,6 +32,7 @@ impl<R: PomManagment> PomService<R> {
         let mut toml_dependencies: TomlDependencies = TomlDependencies::new();
 
         for detail in dependency_details {
+            println!("checking {:?}", detail.file_name);
             let project_xml =
                 self.get_project_pom(&detail.url_pom).await.map_err(BeetleError::from)?;
 
@@ -56,12 +57,8 @@ impl<R: PomManagment> PomService<R> {
                     .await
                     .map_err(BeetleError::from)?;
 
-                let mut properties_dpm =
-                    project_dpm
-                    .properties
-                    .ok_or_else(
-                        || BeetleError::MissingValue("Properties dpm not found".to_string()))?;
-
+                println!("urlpom {:?}", &url_dpm[0]);
+                let properties_dpm = &mut project_dpm.properties.clone();
 
                 let dependencies_dpm =
                     project_dpm
@@ -86,7 +83,7 @@ impl<R: PomManagment> PomService<R> {
                                 if value.contains(&"pom".to_string()) {
                                     let url_sbom =
                                         self
-                                        .get_pom_dependencies_from_bom(d, &properties_dpm)?;
+                                        .get_pom_dependencies_from_bom(d, properties_dpm)?;
 
                                     let project_sbom =
                                         self
@@ -102,13 +99,13 @@ impl<R: PomManagment> PomService<R> {
                                     let dep_bom = dependencies_bom.expect("msg");
 
                                     if let Some(p) = project_sbom.properties {
-                                        properties_dpm.extend(p);
+                                        properties_dpm.get_or_insert_with(|| HashMap::new()).extend(p);
                                     }
 
 
                                     if let Some(dppp) = dep_bom.dependency {
                                         for k in dppp {
-                                            self.populate_artifact_map(k, &properties_dpm, project_sbom.version.clone())?;
+                                            self.populate_artifact_map(k, properties_dpm, project_sbom.version.clone())?;
                                         }
                                     } 
 
@@ -121,7 +118,7 @@ impl<R: PomManagment> PomService<R> {
                                     
                                 }
                             }
-                            None => self.populate_artifact_map(d, &properties_dpm, None)?,
+                            None => self.populate_artifact_map(d, properties_dpm, None)?,
                         }
                     }
                 }
@@ -206,16 +203,22 @@ impl<R: PomManagment> PomService<R> {
     fn populate_artifact_map(
         &mut self,
         d: DependencyPomType,
-        properties: &HashMap<String, String>,
+        properties: &Option<HashMap<String, String>>,
         project_version: Option<String>,
     )  -> Result<(), BeetleError> {
-        let version = &d.version.expect("msg");
-        let raw_version = get_raw_version(version, properties, project_version)?;
+
+        let mut version = d.version.expect("msg");
+        if let Some(prop) = properties {
+            let raw_version =
+                get_raw_version(&version, &prop, project_version)?;
+            version = raw_version.clone();
+        }
+
         let raw_group_id = d.group_id.expect("msg").clone();
         let raw_artifact_id = d.artifact_id.expect("msg");
 
         self.artifact_map
-            .insert(format!("{}:{}", raw_group_id, raw_artifact_id), raw_version);
+            .insert(format!("{}:{}", raw_group_id, raw_artifact_id), version.to_string());
 
         Ok(())
     }
@@ -223,12 +226,15 @@ impl<R: PomManagment> PomService<R> {
     fn get_pom_dependencies_from_bom(
         &self,
         d: DependencyPomType,
-        properties: &HashMap<String, String>
+        properties: &Option<HashMap<String, String>>
     ) -> Result<String, BeetleError> {
 
-        let version = d.version.expect("msg");
-        let raw_version =
-            get_raw_version(&version, properties,None)?;
+        let mut version = d.version.expect("msg");
+        if let Some(prop) = properties {
+            let raw_version =
+                get_raw_version(&version, &prop, None)?;
+            version = raw_version.clone();
+        }
 
         let group_id = d.group_id.expect("msg").clone();
         let raw_group_id = group_id.replace(".", "/");
@@ -236,7 +242,9 @@ impl<R: PomManagment> PomService<R> {
 
         let url_pom =
             get_url_maven_format(
-                &raw_group_id, &artifact_id, &raw_version, 
+                &raw_group_id,
+                &artifact_id,
+                &version, 
                 "pom");
 
         Ok(url_pom)
