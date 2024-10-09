@@ -1,2 +1,4 @@
 [dependencies]
+"io.vertx:vertx-web" = "4.5.10"
 "io.vertx:vertx-core" = "4.5.10"
+

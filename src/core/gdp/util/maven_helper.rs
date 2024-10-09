@@ -23,41 +23,31 @@ pub fn get_raw_version (
 ) -> Result<String, BeetleError> {
 
     let version_regex = Regex::new(r"\$\{([^}]+)\}").unwrap();
-    let semver_regex = Regex::new(r"^\d+(\.\d+){0,2}(-[a-zA-Z0-9\-.]*)?$").unwrap(); 
+    let semver_regex = Regex::new(r"^\d+(\.\d+){0,2}(\.[a-zA-Z0-9\-.]*)?$").unwrap(); 
 
-    let mut raw_version = String::new();
+    let mut raw_version = version.to_string();
 
-    if let Some(caps) = version_regex.captures(&version) {  
+    while let Some(caps) = version_regex.captures(&raw_version) {  
         if let Some(match_version) = caps.get(1) {
-            raw_version = match_version.as_str().to_string();
+            let placeholder = match_version.as_str();
+            if placeholder == "project.version" {
+                raw_version = project_version.clone().ok_or(
+                    BeetleError::MissingValue(
+                        "project version value is None. It must be sent as param.".to_string(),
+                    )
+                )?;
+            } else {
+                raw_version = properties.get(placeholder).ok_or(
+                    BeetleError::MissingValue("Property not found".to_string())
+                )?.clone();
+            }
         }
-    }
-
-    if raw_version.is_empty() {
-       raw_version = version.to_string();
     }
 
     if semver_regex.is_match(&raw_version) {
         return Ok(raw_version);
     }
+    println!("{:?}", raw_version);
 
-    match raw_version.as_str() {
-        "project.version" => {
-            let raw_project_version =
-                project_version.ok_or(
-                    BeetleError::MissingValue(
-                        "project version value is None. It must be sent as param.".to_string()))?;
-
-            Ok(raw_project_version)
-        }
-        _ => {
-            let tmp_version =
-                properties
-                .get(&raw_version)
-                .ok_or(
-                    BeetleError::MissingValue("Property not found".to_string()))?;
-
-            Ok(tmp_version.clone())
-        }
-    }
+    Err(BeetleError::MissingValue("Final version is not a valid semver.".to_string()))
 }
