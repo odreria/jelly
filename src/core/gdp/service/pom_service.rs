@@ -32,7 +32,6 @@ impl<R: PomManagment> PomService<R> {
         let mut toml_dependencies: TomlDependencies = TomlDependencies::new();
 
         for detail in dependency_details {
-            println!("{:?}", detail.file_name );
             let project_xml =
                 self.get_project_pom(&detail.url_pom).await.map_err(BeetleError::from)?;
 
@@ -57,7 +56,7 @@ impl<R: PomManagment> PomService<R> {
                     .await
                     .map_err(BeetleError::from)?;
 
-                let properties_dpm =
+                let mut properties_dpm =
                     project_dpm
                     .properties
                     .ok_or_else(
@@ -95,22 +94,29 @@ impl<R: PomManagment> PomService<R> {
                                         .await
                                         .map_err(BeetleError::from)?;
 
-                                    let dependencies_sbom = match project_sbom.dependencies_managment {
+                                    let dependencies_bom = match project_sbom.dependencies_managment {
                                         Some(value) =>  value.dependencies,
                                         None => None,
                                     };
 
-                                    let dep_bom = dependencies_sbom.expect("msg");
+                                    let dep_bom = dependencies_bom.expect("msg");
+
+                                    if let Some(p) = project_sbom.properties {
+                                        properties_dpm.extend(p);
+                                    }
+
 
                                     if let Some(dppp) = dep_bom.dependency {
                                         for k in dppp {
-                                            self.populate_artifact_map(k, &properties_dpm, project_sbom.version.clone());
+                                            self.populate_artifact_map(k, &properties_dpm, project_sbom.version.clone())?;
                                         }
                                     } 
 
                                     //
-                                    // populate_artifact_map must be like a Set and it
-                                    // must be used to identify the version of the artifacts.
+                                    // TODO: populate_artifact_map data should be reused.
+                                    // 1. It should run first to check all depes before start loading
+                                    // , if dep was registered before then skip it.
+                                    // 2. If dep version didnot find then user project.version.
                                     //
                                     
                                 }
@@ -122,6 +128,14 @@ impl<R: PomManagment> PomService<R> {
 
             }
 
+            let parent =
+                project_xml
+                .parent
+                .expect("msg");
+
+            let parent_version = parent.version.expect("msg");
+
+            
             let pom_dependency: Dependencies = match project_xml.dependencies {
                 Some(value) => value.clone(),
                 None => Dependencies { dependencies: None },
@@ -129,6 +143,7 @@ impl<R: PomManagment> PomService<R> {
 
             if let Some(dep) = &pom_dependency.dependencies {
                 for element in dep {
+
                     let group_id: String = match &element.group_id {
                         Some(value) => value.clone(),
                         None => String::from(""),
@@ -154,14 +169,26 @@ impl<R: PomManagment> PomService<R> {
                         None => String::from(""),
                     };
 
-                    let version_final = if version_dependency.is_empty() {
-                        "4.5.10".to_string()
-                    } else {
-                        version_dependency
-                    };
 
                     if opcional_dependency.is_empty() || opcional_dependency.eq("false") {
                         if scope_dependency.is_empty() || !scope_dependency.eq("test") {
+
+                            let key = format!("{:}:{:}", group_id, artifact);
+                            let version = self.artifact_map.get(&key);
+                            let mut version_final = String::new();
+        
+                            if let Some(v) =  version {
+                                version_final = v.to_string();
+                            };
+        
+                            if version_final.is_empty() {
+                                version_final = version_dependency;
+                            };
+        
+                            if version_final.is_empty() {
+                                version_final = parent_version.clone();
+                            };
+
                             toml_dependencies
                                 .dependencies
                                 .insert(format!("{}:{}", group_id, artifact), version_final);
@@ -186,8 +213,6 @@ impl<R: PomManagment> PomService<R> {
         let raw_version = get_raw_version(version, properties, project_version)?;
         let raw_group_id = d.group_id.expect("msg").clone();
         let raw_artifact_id = d.artifact_id.expect("msg");
-
-        println!("{:}:{:}", raw_artifact_id, raw_version);
 
         self.artifact_map
             .insert(format!("{}:{}", raw_group_id, raw_artifact_id), raw_version);
