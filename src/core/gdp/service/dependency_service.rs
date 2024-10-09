@@ -43,16 +43,22 @@ impl<T: DependencySearch, V: PomManagment> DependencyService<T, V> {
                 let mut vec_dep = Vec::new();
                 vec_dep.push(dep);
 
-               let internal_toml =  self.pom_service.get_pom_details(&vec_dep).await.map_err(BeetleError::from)?;
+               let internal_toml =
+                self
+                .pom_service
+                .get_pom_details(&vec_dep)
+                .await
+                .map_err(BeetleError::from)?;
                 
                 if internal_toml.dependencies.len() != 0 {
                     self.search.enqueue(&internal_toml.values_to_vec());
-                } else {
-                    end = true;
                 }
 
-            }
-
+                if self.search.is_empty() {
+                    end = true
+                }
+                
+            };
         }
 
         Ok(())

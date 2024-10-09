@@ -31,4 +31,8 @@ impl DependencySearch for BreadFirstSearch {
         self.queue.pop_front()
      }
 
+     fn is_empty(&self) -> bool {
+         self.queue.is_empty()
+     }
+
 }
