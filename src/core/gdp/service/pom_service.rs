@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
 use crate::{
-    adapters::pom::pom::{DependencyDetail, TomlDependencies},
+    adapters::pom::pom::TomlDependencies,
     core::gdp::{
         dependency::pom_managment::PomManagment,
         models::dependency::{
-            Dependencies, DependenciesManagment, DependencyManagment, DependencyPomType, Project
+            Dependencies, DependenciesManagment, Dependency, DependencyManagment, DependencyPomType, Project
         },
         util::maven_helper::{get_raw_version, get_url_maven_format},
     }, errors::beetle_error::BeetleError,
@@ -313,7 +313,7 @@ impl<R: PomManagment> PomService<R> {
 
     }
 
-    pub fn get_init_pom(&self, file_path: &str) -> Vec<DependencyDetail> {
+    pub fn get_init_pom(&self, file_path: &str) -> Vec<Dependency> {
         self.managment
             .read_toml_file(file_path)
             .unwrap()
