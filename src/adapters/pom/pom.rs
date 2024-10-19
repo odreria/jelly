@@ -1,6 +1,5 @@
 use crate::core::gdp::dependency:: pom_managment::PomManagment;
-use crate::core::gdp::models::dependency::Project;
-use crate::core::gdp::util::maven_helper::get_url_maven_format;
+use crate::core::gdp::models::dependency::{Dependency, Project};
 
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -23,15 +22,6 @@ impl PomManagment for Pom {
     }
 }
 
-
-#[derive(Clone, Debug, Deserialize, PartialEq)]
-pub struct DependencyDetail {
-    pub file_name: String,
-    pub version: String,
-    pub url_jar: String,
-    pub url_pom: String,
-}
-
 #[derive(Debug, Deserialize)]
 pub struct TomlDependencies {
     pub dependencies: HashMap<String, String>,
@@ -43,8 +33,8 @@ impl TomlDependencies {
         TomlDependencies { dependencies: new_map}
     }
 
-    pub fn values_to_vec(&self) -> Vec<DependencyDetail> {
-        let mut vec: Vec<DependencyDetail> = Vec::new();
+    pub fn values_to_vec(&self) -> Vec<Dependency> {
+        let mut vec: Vec<Dependency> = Vec::new();
 
         for (artifact, version) in &self.dependencies {
             vec.push(Self::parse_dependency(&artifact, &version));
@@ -53,20 +43,12 @@ impl TomlDependencies {
         vec
     }
 
-    fn parse_dependency(artifact: &str, version: &str) -> DependencyDetail {
+    fn parse_dependency(artifact: &str, version: &str) -> Dependency {
         let parts: Vec<&str> = artifact.split(':').collect();
-        let group_id = parts[0].replace('.', "/");
+        let group_id = parts[0];
         let artifact_id = parts[1];
-        let file_name = format!("{}-{}.jar", artifact_id, version);
-        let url_jar = get_url_maven_format(&group_id, &artifact_id, &version, "jar");
-        let url_pom = get_url_maven_format(&group_id, &artifact_id, &version, "pom");
 
-        DependencyDetail {
-            file_name,
-            version: version.to_string(),
-            url_jar,
-            url_pom,
-        }
+        Dependency::new(group_id, artifact_id, version)
     }
 
 }

@@ -5,6 +5,7 @@ use reqwest::Error as ReqwestError;
 pub enum BeetleError {
     HTTP(ReqwestError),
     MissingValue(String),
+    FILE_NOT_FOUND(String),
 }
 
 impl fmt::Display for BeetleError {
@@ -12,6 +13,7 @@ impl fmt::Display for BeetleError {
         match self {
             BeetleError::HTTP(err) => write!(f, "HTTP error: {}", err),
             BeetleError::MissingValue(message) => write!(f, "Missing value: {}", message),
+            BeetleError::FILE_NOT_FOUND(message) => write!(f, "File not Found {}", message),
         }
     }
 }

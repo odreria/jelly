@@ -99,6 +99,23 @@ pub struct Dependency {
     pub scope: Option<String>,
 }
 
+impl Dependency {
+    pub fn new(group_id: &str, artifact_id: &str, version: &str) -> Self {
+        Dependency {
+            group_id: group_id,
+            artifact_id: artifact_id,
+            version: version,
+            optional: None,
+            type_dep: None,
+            scope: None,
+        }
+    }
+
+    pub fn to_string(&self) -> String {
+        format!("{}:{}:{}", self.group_id, self.artifact_id, self.version)        
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Build {
     #[serde(rename = "pluginManagement")]
