@@ -25,7 +25,7 @@ pub struct Project {
     pub build: Option<Build>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Parent {
     #[serde(rename = "groupId")]
     pub group_id: Option<String>,
@@ -51,31 +51,12 @@ pub struct License {
     pub distribution: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize)]
 pub struct DependenciesManagment {
     #[serde(rename = "dependencies")]
-    pub dependencies: Option<DependencyManagment>,
+    pub dependencies: Option<Dependencies>,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct DependencyManagment {
-    #[serde(rename = "dependency")]
-    pub dependency: Option<Vec<DependencyPomType>>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct DependencyPomType {
-    #[serde(rename = "groupId")]
-    pub group_id: Option<String>,
-    #[serde(rename = "artifactId")]
-    pub artifact_id: Option<String>,
-    #[serde(rename = "version")]
-    pub version: Option<String>,
-    #[serde(rename = "type")]
-    pub type_dep: Option<String>,
-    #[serde(rename = "scope")]
-    pub scope: Option<String>,
-}
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Dependencies {
@@ -100,7 +81,7 @@ pub struct Dependency {
 }
 
 impl Dependency {
-    pub fn new(group_id: &str, artifact_id: &str, version: &str) -> Self {
+    pub fn new(group_id: Option<String>, artifact_id: Option<String>, version: Option<String>) -> Self {
         Dependency {
             group_id: group_id,
             artifact_id: artifact_id,
@@ -112,7 +93,10 @@ impl Dependency {
     }
 
     pub fn to_string(&self) -> String {
-        format!("{}:{}:{}", self.group_id, self.artifact_id, self.version)        
+        format!("{}:{}:{}",
+        <std::option::Option<std::string::String> as Clone>::clone(&self.group_id).unwrap_or_default(),
+        <std::option::Option<std::string::String> as Clone>::clone(&self.artifact_id).unwrap_or_default(),
+        <std::option::Option<std::string::String> as Clone>::clone(&self.version).unwrap_or_default())        
     }
 }
 

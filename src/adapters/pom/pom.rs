@@ -1,18 +1,19 @@
 use crate::core::gdp::dependency:: pom_managment::PomManagment;
 use crate::core::gdp::models::dependency::{Dependency, Project};
+use crate::errors::beetle_error::BeetleError;
 
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs;
-use toml::de::Error as TomlError;
 use quick_xml::de::from_str;
 
 pub struct Pom;
 
 impl PomManagment for Pom {
-    
-    fn read_toml_file(&self, file_path: &str) -> Result<TomlDependencies, TomlError> {
-        let content = fs::read_to_string(file_path).expect("No se logro leer el archivo");
+
+    fn read_toml_file(&self, file_path: &str) -> Result<TomlDependencies, BeetleError> {
+        let content =
+            fs::read_to_string(file_path).map_err(BeetleError::from)?;
         let dependencies: TomlDependencies = toml::de::from_str(&content)?;
         Ok(dependencies)
     }
@@ -48,7 +49,10 @@ impl TomlDependencies {
         let group_id = parts[0];
         let artifact_id = parts[1];
 
-        Dependency::new(group_id, artifact_id, version)
+        Dependency::new(
+            Some(group_id.to_string()),
+            Some(artifact_id.to_string()),
+            Some(version.to_string()))
     }
 
 }
