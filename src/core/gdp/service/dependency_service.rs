@@ -1,65 +1,41 @@
-use crate::{core::gdp::dependency::{dependency_search::DependencySearch, pom_managment::PomManagment}, errors::beetle_error::BeetleError};
+
+use crate::{core::gdp::dependency::{pom_donwloader::PomDownloader, pom_managment::PomManagment}, errors::beetle_error::BeetleError};
+
 use super::pom_service::PomService;
 
-pub struct DependencyService<T: DependencySearch, V: PomManagment> {
-    pub search: T,
-    pub pom_service: PomService<V>,
+pub struct DependencyService<V: PomManagment, D: PomDownloader> {
+    pub pom_service: PomService<V, D>,
 }
 
-impl<T: DependencySearch, V: PomManagment> DependencyService<T, V> {
-    pub fn new(search: T, pom_service: PomService<V>) -> Self {
+impl<V: PomManagment, D: PomDownloader> DependencyService<V, D> {
+    pub fn new(pom_service: PomService<V, D>) -> Self {
         DependencyService {
-            search,
             pom_service,
         }
     }
 
     pub async fn start(&mut self) -> Result<(), BeetleError> {
-        let mut end: bool = false;
+
         let dependencies_from_toml =
             self.pom_service.get_init_pom("jelly.toml");
 
-        let toml =
+        let dependencies = dependencies_from_toml?.values_to_vec();
+
+        for dep_toml in dependencies {
+
             self
             .pom_service
-            .get_pom_details(&dependencies_from_toml)
+            .get_pom_details(dep_toml)
             .await
-            .map_err(
+                .map_err(
                 |e| {
-                    BeetleError::MissingValue(
+                        BeetleError::MissingValue(
                         format!("Error downloading pom.xml details {}", e)
-                    )
-                }
-            )?;
-
-        self.search.enqueue(&toml.values_to_vec());
-
-        while end == false {
-            let u = self.search.dequeue();
-            if let Some(dep) = u {
-                println!("Downloading {}", dep.file_name);
-                // add instruction to download the jar file
-
-                let mut vec_dep = Vec::new();
-                vec_dep.push(dep);
-
-               let internal_toml =
-                self
-                .pom_service
-                .get_pom_details(&vec_dep)
-                .await
-                .map_err(BeetleError::from)?;
-                
-                if internal_toml.dependencies.len() != 0 {
-                    self.search.enqueue(&internal_toml.values_to_vec());
-                }
-
-                if self.search.is_empty() {
-                    end = true
-                }
-                
-            };
+                        )
+                    }
+                )?;
         }
+
 
         Ok(())
 

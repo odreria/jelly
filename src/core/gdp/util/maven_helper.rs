@@ -5,17 +5,6 @@ use regex::Regex;
 use crate::errors::beetle_error::BeetleError;
 
 
-pub fn get_url_maven_format(group_id: &str, artifact_id: &str, version: &str, extension: &str) -> String {
-    let file_name = format!("{}-{}.{}", artifact_id, version, extension);
-    format!(
-        "https://repo1.maven.org/maven2/{}/{}/{}/{}",
-        group_id,
-        artifact_id,
-        version,
-        file_name
-    )
-}
-
 pub fn get_raw_version (
     version: &str,
     properties: &HashMap<String, String>,
