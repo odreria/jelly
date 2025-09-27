@@ -1,5 +1,5 @@
 
-use crate::{core::gdp::dependency::{pom_donwloader::PomDownloader, pom_managment::PomManagment}, errors::beetle_error::BeetleError};
+use crate::{core::gdp::dependency::{pom_donwloader::PomDownloader, pom_managment::PomManagment}, errors::{JellyError, Result}};
 
 use super::pom_service::PomService;
 
@@ -14,7 +14,7 @@ impl<V: PomManagment, D: PomDownloader> DependencyService<V, D> {
         }
     }
 
-    pub async fn start(&mut self) -> Result<(), BeetleError> {
+    pub async fn start(&mut self) -> Result<()> {
 
         let dependencies_from_toml =
             self.pom_service.get_init_pom("jelly.toml");
@@ -27,12 +27,8 @@ impl<V: PomManagment, D: PomDownloader> DependencyService<V, D> {
             .pom_service
             .get_pom_details(dep_toml)
             .await
-                .map_err(
-                |e| {
-                        BeetleError::MissingValue(
-                        format!("Error downloading pom.xml details {}", e)
-                        )
-                    }
+                .map_err(|e|
+                    JellyError::repository(format!("Error downloading pom.xml details {}", e))
                 )?;
         }
 

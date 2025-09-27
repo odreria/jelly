@@ -1,24 +1,21 @@
 use reqwest::get;
 
-use crate::{core::gdp::{models::dependency::{Dependency, Project}, util::helper::extract_value}, errors::beetle_error::BeetleError};
-
-
+use crate::{core::gdp::{models::dependency::{Dependency, Project}, util::helper::extract_value}, errors::{JellyError, Result}};
 
 const ERROR_MESSAGE_GROUP_ID: &str = "groupd id must be available for downloading the POM file.";
 const ERROR_MESSAGE_ARTIFACT_ID: &str =
     "artifact id must be available for downloading the POM file.";
 const ERROR_MESSAGE_VERSION: &str = "version must be available for downloading the POM file.";
 
-/// I want to have specific implementation for pom downloading, ex: from maven or from local repos.
 pub trait PomDownloader {
-    async fn download_pom(&self, dep: &Dependency) -> Result<Project, BeetleError>;
+    async fn download_pom(&self, dep: &Dependency) -> Result<Project>;
 }
 
 pub struct MavenPomDownloader;
 
 impl PomDownloader for MavenPomDownloader {
 
-    async fn download_pom(&self, dep: &Dependency) -> Result<Project, BeetleError> {
+    async fn download_pom(&self, dep: &Dependency) -> Result<Project> {
         let base_url = "https://repo1.maven.org/maven2";
         let opt_group_id = dep.group_id.clone();
         let opt_artifact_id = dep.artifact_id.clone();

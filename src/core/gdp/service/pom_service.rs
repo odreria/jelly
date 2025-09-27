@@ -9,7 +9,7 @@ use crate::{
         },
         util::maven_helper::get_raw_version,
     },
-    errors::beetle_error::BeetleError,
+    errors::{JellyError, Result},
 };
 
 use crate::core::gdp::util::helper::extract_value;
@@ -32,7 +32,7 @@ impl<R: PomManagment, D: PomDownloader> PomService<R, D> {
     pub async fn get_pom_details(
         &mut self,
         dep: Dependency,
-    ) -> Result<(), BeetleError> {
+    ) -> Result<()> {
         let mut toml_dependencies: TomlDependencies = TomlDependencies::new();
         println!("checking {:?}", dep.to_string());
         let project = self.downloader.download_pom(&dep).await?;
@@ -45,7 +45,7 @@ impl<R: PomManagment, D: PomDownloader> PomService<R, D> {
         &self,
         project: &Project,
         toml_dependencies: &mut TomlDependencies,
-    ) -> Result<(), BeetleError> {
+    ) -> Result<()> {
         
         let pom_dependency: Dependencies = match project.dependencies.clone() {
             Some(value) => value.clone(),
@@ -98,7 +98,7 @@ impl<R: PomManagment, D: PomDownloader> PomService<R, D> {
     /// Si no tiene dependency managmanet el programa debe seguir su ejecucion tratando de encontrar las versiones
     /// para todas las otras dependencias.
     /// 
-    async fn check_dependency_managment(&mut self, project: &Project) -> Result<(), BeetleError> {
+    async fn check_dependency_managment(&mut self, project: &Project) -> Result<()> {
 
         let dep_managment= project.dependencies_managment.clone().unwrap_or_default();
 
@@ -107,12 +107,12 @@ impl<R: PomManagment, D: PomDownloader> PomService<R, D> {
             let prop = project.properties.clone();
 
             let properties = prop
-                .ok_or_else(
-                    || BeetleError::MissingValue(
-                        "Dependendency Managment has not properties".to_string()))?;
+                .ok_or_else(||
+                    JellyError::missing_configuration("Dependency Management has no properties")
+                )?;
 
-            let opt_dpm = 
-                self.get_pom_dependencies_managment(dpm, &properties).map_err(BeetleError::from)?;
+            let opt_dpm =
+                self.get_pom_dependencies_managment(dpm, &properties)?;
 
             let dpm =
                 extract_value(
@@ -129,21 +129,17 @@ impl<R: PomManagment, D: PomDownloader> PomService<R, D> {
         Ok(())
     }
 
-    async fn get_version_from_dependency_managment(&mut self, dep: &Dependency) -> Result<(), BeetleError> {
+    async fn get_version_from_dependency_managment(&mut self, dep: &Dependency) -> Result<()> {
 
         let project_dpm = self.downloader.download_pom(&dep).await?;
 
-        let dependencies_dpm = project_dpm.dependencies_managment.ok_or_else(|| {
-            BeetleError::MissingValue(
-                "Sub Dependency Managanment section not found from Root Dependency Managment".to_string(),
-            )
-        })?;        
+        let dependencies_dpm = project_dpm.dependencies_managment.ok_or_else(||
+            JellyError::missing_configuration("Sub Dependency Management section not found from Root Dependency Management")
+        )?;        
 
-        let dependency_dpm = dependencies_dpm.dependencies.ok_or_else(|| {
-            BeetleError::MissingValue(
-                "Sub Dependencies not found from Sub Dependency Managanment".to_string(),
-            )
-        })?;
+        let dependency_dpm = dependencies_dpm.dependencies.ok_or_else(||
+            JellyError::missing_configuration("Sub Dependencies not found from Sub Dependency Management")
+        )?;
 
         let properties_dpm = &mut project_dpm.properties.clone();
 
@@ -200,7 +196,7 @@ impl<R: PomManagment, D: PomDownloader> PomService<R, D> {
         d: Dependency,
         properties: &Option<HashMap<String, String>>,
         project_version: Option<String>,
-    ) -> Result<(), BeetleError> {
+    ) -> Result<()> {
         let mut version = d.version.expect("msg");
         if let Some(prop) = properties {
             let raw_version = get_raw_version(&version, &prop, project_version)?;
@@ -222,11 +218,8 @@ impl<R: PomManagment, D: PomDownloader> PomService<R, D> {
         &self,
         dep: Dependency,
         properties: &Option<HashMap<String, String>>,
-    ) -> Result<Dependency, BeetleError> {
-        let mut version =
-            dep.version.ok_or(
-                || BeetleError::MissingValue(
-                        "BOM's dependency has not version value".to_string())).unwrap_or_default();
+    ) -> Result<Dependency> {
+        let mut version = dep.version.unwrap_or_default();
 
         if let Some(prop) = properties {
             let raw_version = get_raw_version(&version, &prop, None)?;
@@ -254,7 +247,7 @@ impl<R: PomManagment, D: PomDownloader> PomService<R, D> {
         &self,
         dpm: &Dependencies,
         properties: &HashMap<String, String>,
-    ) -> Result<Option<Vec<Dependency>>, BeetleError> {
+    ) -> Result<Option<Vec<Dependency>>> {
         
         let mut opt_dependencies: Option<Vec<Dependency>> = Some(Vec::new());
 
@@ -262,17 +255,17 @@ impl<R: PomManagment, D: PomDownloader> PomService<R, D> {
 
             let version = dep
                     .version
-                    .ok_or_else(|| BeetleError::MissingValue("Version not found".to_string()))?;
+                    .ok_or_else(|| JellyError::missing_configuration("Version not found"))?;
 
             let raw_version = get_raw_version(&version, properties, None)?;
 
                 let raw_group_id = dep
                     .group_id
-                    .ok_or_else(|| BeetleError::MissingValue("group_id not found".to_string()))?;
+                    .ok_or_else(|| JellyError::missing_configuration("group_id not found"))?;
 
                 let artifact_id = dep
                     .artifact_id
-                    .ok_or_else(|| BeetleError::MissingValue("artifact_id not found".to_string()))?;
+                    .ok_or_else(|| JellyError::missing_configuration("artifact_id not found"))?;
                 
                 let new_dep = Dependency::new(Some(raw_group_id), Some(artifact_id), Some(raw_version));
 
@@ -284,7 +277,7 @@ impl<R: PomManagment, D: PomDownloader> PomService<R, D> {
         Ok(opt_dependencies)
     }
 
-    pub fn get_init_pom(&self, file_path: &str) -> Result<TomlDependencies, BeetleError> {
+    pub fn get_init_pom(&self, file_path: &str) -> Result<TomlDependencies> {
         self.managment.read_toml_file(file_path)
     }
 
