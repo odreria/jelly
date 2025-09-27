@@ -1,6 +1,6 @@
 use crate::core::gdp::dependency:: pom_managment::PomManagment;
 use crate::core::gdp::models::dependency::{Dependency, Project};
-use crate::errors::beetle_error::BeetleError;
+use crate::errors::{JellyError, Result};
 
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -11,9 +11,8 @@ pub struct Pom;
 
 impl PomManagment for Pom {
 
-    fn read_toml_file(&self, file_path: &str) -> Result<TomlDependencies, BeetleError> {
-        let content =
-            fs::read_to_string(file_path).map_err(BeetleError::from)?;
+    fn read_toml_file(&self, file_path: &str) -> Result<TomlDependencies> {
+        let content = fs::read_to_string(file_path)?;
         let dependencies: TomlDependencies = toml::de::from_str(&content)?;
         Ok(dependencies)
     }

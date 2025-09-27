@@ -14,3 +14,4 @@ serde = { version= "1.0.210", features = ["derive"]}
 quick-xml = { version ="0.36.1", features = ["serialize"]}
 async-trait = "0.1.82"
 regex = "1.11.0"
+thiserror = "1.0"
