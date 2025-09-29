@@ -44,6 +44,15 @@ pub enum JellyError {
 
     #[error("Validation error: {message}")]
     Validation { message: String },
+
+    #[error("Output display error: {0}")]
+    OutputError(String),
+
+    #[error("File system error: {0}")]
+    FileSystemError(String),
+
+    #[error("Project initialization error: {0}")]
+    ProjectInitError(String),
 }
 
 impl JellyError {

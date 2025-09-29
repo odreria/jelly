@@ -1,22 +1,12 @@
-use jelly::adapters::pom::pom::Pom;
-use jelly::core::gdp::dependency::pom_donwloader::{MavenPomDownloader, PomDownloader};
-use jelly::core::gdp::dependency::pom_managment::PomManagment;
-use jelly::core::gdp::service::{dependency_service::DependencyService, pom_service::PomService};
-use tokio;
+use jelly::cli::app::JellyApp;
+use jelly::cli::output::JellyOutput;
 
 #[tokio::main]
 async fn main() {
+    let app = JellyApp::parse_args();
 
-    let managment = Pom;
-    let downloader = MavenPomDownloader;
-
-    match DependencyService::new(
-        PomService::new(managment, downloader)
-    )
-    .start()
-    .await {
-        Ok(_) => print!("POM Processed Correclty."),
-        Err(e) => eprint!("An error ocurred: {}", e),
-    };
-
+    if let Err(e) = app.execute().await {
+        let _ = JellyOutput::error(&format!("Error: {}", e));
+        std::process::exit(1);
+    }
 }

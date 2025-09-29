@@ -1,0 +1,17 @@
+[package]
+name = "my-awesome-app"
+version = "1.0.0"
+main-class = "com.example.Main"
+
+[dependencies]
+# Add your dependencies here
+# Example: "org.springframework:spring-core" = "6.0.0"
+
+[dev-dependencies]
+# Development dependencies
+# Example: "junit:junit" = "4.13.2"
+
+[scripts]
+# Custom scripts
+start = "java -cp 'libs/*' ${main-class}"
+test = "java -cp 'libs/*:.' org.junit.runner.JUnitCore"
